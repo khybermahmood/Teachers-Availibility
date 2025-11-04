@@ -58,10 +58,7 @@
         .availability-list p{margin:8px 0;font-size:16px}
         .schedule-block{margin-bottom:20px;padding:12px;background:rgba(240,250,255,0.95);border-radius:8px;border-left:4px solid var(--accent-color);font-size:15px}
         .schedule-block strong{font-weight:600;color:var(--accent-dark)}
-        .export-buttons{display:flex;gap:10px;margin-top:15px;flex-wrap:wrap;justify-content:center}
-        .link-sheet{display:flex;gap:8px;align-items:center;margin-top:12px}
-        .link-sheet input{flex:1;max-width:none}
-        .link-sheet button{font-size:14px;padding:10px 16px}
+        .export-buttons{display:flex;gap:10px;margin-top:15px;flex-wrap:wrap}
         @media (max-width:600px){
             .container{padding:20px;border-radius:15px}
             .section{padding:20px}
@@ -73,15 +70,12 @@
             .totals .month-buttons{max-width:100%}
             .availability-list{max-height:180px}
             .export-buttons{justify-content:center}
-            .link-sheet{flex-direction:column}
-            .link-sheet input{max-width:100%}
         }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>IES Örebro Teacher Availability Dashboard</h1>
-
     <!-- TEACHERS -->
     <div class="section">
         <h2>Available Right Now</h2>
@@ -90,7 +84,6 @@
         <div class="teachers" id="availableTeachers"></div>
         <div class="availability-list" id="teacherResults"></div>
     </div>
-
     <!-- SUPPORT STAFF -->
     <div class="section">
         <h2>Support Staff</h2>
@@ -99,7 +92,6 @@
         <div class="teachers" id="availableSupport"></div>
         <div class="availability-list" id="supportResults"></div>
     </div>
-
     <!-- CHECK AVAILABILITY -->
     <div class="section">
         <h2>Check Availability for a Time Range</h2>
@@ -117,63 +109,43 @@
         <button onclick="ui.handleCheckAvailability()">Check Availability</button>
         <div class="availability-list" id="availabilityResults"></div>
     </div>
-
     <!-- EXTRA MINUTES -->
     <div class="section">
         <h2>Extra Worked Minutes</h2>
         <p>This data is stored in your local browser.</p>
-
-        <!-- LINK TO GOOGLE SHEET -->
-        <div class="form-group">
-            <label>Linked Google Sheet (Web‑App URL)</label>
-            <div class="link-sheet">
-                <input type="text" id="sheetUrl" placeholder="https://script.google.com/macros/s/.../exec">
-                <button onclick="ui.linkGoogleSheet()">Link Sheet</button>
-            </div>
-            <small id="sheetStatus" style="margin-top:4px;color:#059669;"></small>
-        </div>
-
         <div class="form-group"><label>Teacher / Support:</label>
             <select id="extraTeacher"><option value="">-- Select --</option></select>
         </div>
         <div class="form-group"><label>Week/Year:</label><input type="text" id="weekYear" placeholder="Week 43, 2025"></div>
         <div class="form-group"><label>Minutes:</label><input type="number" id="minutes"></div>
         <button onclick="ui.handleAddEntry()">Add</button>
-
         <div class="export-buttons">
             <button onclick="ui.exportLocalCSV()">Export Local CSV</button>
-            <button onclick="ui.exportToGoogleSheet()">Export to Google Sheet (manual)</button>
+            <button onclick="ui.exportToGoogleSheet()">Export to Google Sheet</button>
         </div>
     </div>
-
     <!-- MONTHLY TOTALS -->
     <div class="section">
         <h2>Monthly Totals</h2>
         <div class="totals" id="monthTotals">
             <label for="yearSelect">Year:</label>
             <select id="yearSelect">
-                <option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option>
+                <option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option>
                 <option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option>
             </select>
             <div class="month-buttons">
                 <button>Jan</button><button>Feb</button><button>Mar</button><button>Apr</button>
                 <button>May</button><button>Jun</button><button>Jul</button><button>Aug</button>
-                <button>Sep</button><button>Oct</button><button>Nov</button><button>Dec</button>
+                <button>Sep</button><button class="active">Oct</button><button>Nov</button><button>Dec</button>
             </div>
         </div>
-        <p id="monthlyTotalText">Total for <span id="currentMonthYear"></span>: <span id="totalMinutes">0</span> minutes</p>
+        <p>Total for October 2025: 0 minutes</p>
     </div>
 </div>
 
 <script>
-/* ==== AUTO‑SELECT CURRENT MONTH ==== */
-function getCurrentMonthYear() {
-    const now = new Date();
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const monthName = months[now.getMonth()];
-    const year = now.getFullYear();
-    return {month: monthName, year};
-}
+/* ==== GOOGLE APPS SCRIPT WEB APP URL (REPLACE WITH YOUR OWN) ==== */
+const GOOGLE_SHEET_WEBAPP = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
 
 /* ==================== DATA ==================== */
 const data = {
@@ -203,7 +175,7 @@ const data = {
             {name:"Wynonah Plattner",role:"support",schedule:{Monday:"Check her schedule",Tuesday:"-",Wednesday:"-",Thursday:"-",Friday:"-"}},
             {name:"Vicenta Marie Linden",role:"support",schedule:{Monday:"12:35-14:20",Tuesday:"08:30-11:15;12:25-13:20",Wednesday:"-",Thursday:"-",Friday:"09:50-11:00;12:30-14:15"}},
             {name:"Alan Smith",role:"teacher",schedule:{Monday:"-;13:35-14:50",Tuesday:"-;09:20-10:30",Wednesday:"-",Thursday:"-",Friday:"-"}},
-            {name:"Alex Reid",role:"teacher",schedule:{Monday:"-",Tuesday:"09:00-10:00;13:20-16:00",Wednesday:"-",Thursday:"10:55-12:15",Friday:"-"}},
+            {name:"Alex Reid",role:"teacher",schedule:{Monday:"-",Tuesday:"09:00-10:00;13:20-23:59",Wednesday:"-",Thursday:"10:55-12:15",Friday:"-"}},
             {name:"Alvinda Hall",role:"teacher",schedule:{Monday:"09:35-10:45;13:40-14:40",Tuesday:"-",Wednesday:"12:35-14:00",Thursday:"09:00-10:20",Friday:"-"}},
             {name:"Alyssa Gestrinius",role:"teacher",schedule:{Monday:"10:30-11:30",Tuesday:"-",Wednesday:"-",Thursday:"-",Friday:"-"}},
             {name:"Amanda Bergström",role:"teacher",schedule:{Monday:"-;14:45-16:00",Tuesday:"-",Wednesday:"-;12:50-14:30",Thursday:"-",Friday:"-"}},
@@ -260,167 +232,24 @@ const data = {
 const ui = {
     init(){
         this.updateTimes();
-
-        // ---- AUTO‑SELECT CURRENT MONTH ----
-        const {month, year} = getCurrentMonthYear();
-        const yearSelect = document.getElementById('yearSelect');
-        yearSelect.value = year;
-
-        const monthButtons = document.querySelectorAll('#monthTotals .month-buttons button');
-        monthButtons.forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.textContent === month) btn.classList.add('active');
-        });
-
-        // ---- LOAD LINKED SHEET URL (if any) ----
-        const saved = localStorage.getItem('googleSheetWebApp');
-        if (saved) {
-            document.getElementById('sheetUrl').value = saved;
-            document.getElementById('sheetStatus').textContent = 'Linked';
-            document.getElementById('sheetStatus').style.color = '#059669';
-        }
-
         data.loadFromFile().then(list => {
             data.teachers = list;
             this.renderAvailableNow();
             this.fillDropdown();
             this.setupSearchBars();
             this.setupTimeZone();
-            this.setupMonthButtons();
-            this.updateMonthlyTotal();
         });
     },
-
-    /* ---------- GOOGLE SHEET LINKING ---------- */
-    linkGoogleSheet() {
-        const url = document.getElementById('sheetUrl').value.trim();
-        if (!url) {
-            alert('Please paste the Web‑App URL');
-            return;
-        }
-        localStorage.setItem('googleSheetWebApp', url);
-        document.getElementById('sheetStatus').textContent = 'Linked';
-        document.getElementById('sheetStatus').style.color = '#059669';
-        alert('Google Sheet linked! New entries will be sent automatically.');
-    },
-
-    async sendToGoogleSheet(row) {
-        const webApp = localStorage.getItem('googleSheetWebApp');
-        if (!webApp) return;   // no sheet linked → silent skip
-
-        try {
-            await fetch(webApp, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify([row])   // send one row at a time
-            });
-        } catch (e) {
-            console.error('Google Sheet sync failed', e);
-            // we don’t alert here – user already sees “Added”
-        }
-    },
-
-    /* ---------- ADD ENTRY (local + optional sheet) ---------- */
-    async handleAddEntry(){
-        const who = document.getElementById('extraTeacher').value;
-        const week = document.getElementById('weekYear').value;
-        const mins = document.getElementById('minutes').value;
-        if (!who || !week || !mins) { alert('Fill all fields'); return; }
-
-        const entry = {who, week, mins: +mins};
-
-        // 1. Save locally
-        const store = JSON.parse(localStorage.getItem('extraMins') || '[]');
-        store.push(entry);
-        localStorage.setItem('extraMins', JSON.stringify(store));
-
-        // 2. Send to Google Sheet (if linked)
-        await this.sendToGoogleSheet([entry.who, entry.week, entry.mins]);
-
-        alert('Added' + (localStorage.getItem('googleSheetWebApp') ? ' & synced to Google Sheet' : ''));
-        document.getElementById('extraTeacher').value = '';
-        document.getElementById('weekYear').value = '';
-        document.getElementById('minutes').value = '';
-
-        this.updateMonthlyTotal();   // refresh total
-    },
-
-    /* ---------- MANUAL EXPORT (all data) ---------- */
-    async exportToGoogleSheet() {
-        const raw = JSON.parse(localStorage.getItem('extraMins') || '[]');
-        if (!raw.length) { alert('No data to export'); return; }
-
-        const payload = raw.map(r => [r.who, r.week, r.mins]);
-
-        try {
-            await fetch(localStorage.getItem('googleSheetWebApp') || '', {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-            alert('All data sent to Google Sheet!');
-        } catch (e) {
-            console.error(e);
-            alert('Error – check console');
-        }
-    },
-
-    exportLocalCSV() {
-        const raw = JSON.parse(localStorage.getItem('extraMins') || '[]');
-        if (!raw.length) { alert('No data to export'); return; }
-
-        let csv = 'Teacher/Staff,Week,Minutes\n';
-        raw.forEach(r => {
-            csv += `"${r.who}","${r.week}",${r.mins}\n`;
-        });
-
-        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `extra_minutes_${new Date().toISOString().slice(0,10)}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-    },
-
-    /* ---------- MONTHLY TOTAL ---------- */
-    setupMonthButtons() {
-        const buttons = document.querySelectorAll('#monthTotals .month-buttons button');
-        buttons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                buttons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this.updateMonthlyTotal();
-            });
-        });
-        document.getElementById('yearSelect').addEventListener('change', () => this.updateMonthlyTotal());
-    },
-
-    updateMonthlyTotal() {
-        const year = document.getElementById('yearSelect').value;
-        const activeBtn = document.querySelector('#monthTotals .month-buttons button.active');
-        const month = activeBtn ? activeBtn.textContent : '';
-        if (!month) return;
-
-        const data = JSON.parse(localStorage.getItem('extraMins') || '[]');
-        const total = data
-            .filter(r => r.week.includes(month) && r.week.includes(year))
-            .reduce((sum, r) => sum + r.mins, 0);
-
-        document.getElementById('currentMonthYear').textContent = `${month} ${year}`;
-        document.getElementById('totalMinutes').textContent = total;
-    },
-
-    /* ---------- THE REST (availability, search, etc.) ---------- */
     updateTimes(){
         const opts = {hour:'2-digit',minute:'2-digit',hour12:false,timeZone:data.timeZone,timeZoneName:'short'};
-        const str = `Available as of ${new Date().toLocaleTimeString('en-US',opts)} (Week 2025-W43 / Nov 2025)`;
+        const str = `Available as of ${new Date().toLocaleTimeString('en-US',opts)} (Week 2025-W43 / Oct 2025)`;
         document.getElementById('availabilityTime').textContent = str;
         document.getElementById('supportTime').textContent = str;
     },
-    renderAvailableNow(){ this.renderSection('teacher'); this.renderSection('support'); },
+    renderAvailableNow(){
+        this.renderSection('teacher');
+        this.renderSection('support');
+    },
     renderSection(role){
         const container = document.getElementById(role === 'teacher' ? 'availableTeachers' : 'availableSupport');
         container.innerHTML = '';
@@ -477,9 +306,15 @@ const ui = {
         const term = input.value.trim().toLowerCase();
         const resultsDiv = document.getElementById(role === 'teacher' ? 'teacherResults' : 'supportResults');
         resultsDiv.innerHTML = '';
-        if (!term) { this.renderAvailableNow(); return; }
+        if (!term) {
+            this.renderAvailableNow();
+            return;
+        }
         const matches = data.teachers.filter(p => p.role === role && p.name.toLowerCase().includes(term));
-        if (matches.length === 0) { resultsDiv.innerHTML = '<p>No one found.</p>'; return; }
+        if (matches.length === 0) {
+            resultsDiv.innerHTML = '<p>No one found.</p>';
+            return;
+        }
         matches.forEach(person => {
             const block = document.createElement('div');
             block.className = 'schedule-block';
@@ -510,7 +345,10 @@ const ui = {
         const from = document.getElementById('timeFrom').value;
         const to = document.getElementById('timeTo').value;
         const out = document.getElementById('availabilityResults');
-        if (!date || !from || !to) { out.innerHTML = '<p style="color:#b91c1c;">Please fill all fields.</p>'; return; }
+        if (!date || !from || !to) {
+            out.innerHTML = '<p style="color:#b91c1c;">Please fill all fields.</p>';
+            return;
+        }
         const [fh, fm] = from.split(':').map(Number);
         const [th, tm] = to.split(':').map(Number);
         const fromMin = fh*60 + fm;
@@ -518,7 +356,10 @@ const ui = {
         const checkDate = new Date(`${date}T${from}:00`);
         out.innerHTML = '';
         const matches = data.teachers.filter(p => this.isAvailableInRange(p, checkDate, fromMin, toMin));
-        if (matches.length === 0) { out.innerHTML = '<p>No one available in that time range.</p>'; return; }
+        if (matches.length === 0) {
+            out.innerHTML = '<p>No one available in that time range.</p>';
+            return;
+        }
         matches.forEach(p => {
             const day = checkDate.toLocaleString('en-US', {weekday:'long', timeZone:data.timeZone});
             const sched = p.schedule[day];
@@ -553,12 +394,64 @@ const ui = {
             return sm <= toMin && em >= fromMin;
         }).map(r => r.split('-').map(t => t.padStart(5,'0')).join('-'));
     },
+    handleAddEntry(){
+        const who = document.getElementById('extraTeacher').value;
+        const week = document.getElementById('weekYear').value;
+        const mins = document.getElementById('minutes').value;
+        if (!who || !week || !mins) { alert('Fill all fields'); return; }
+        const store = JSON.parse(localStorage.getItem('extraMins') || '[]');
+        store.push({who, week, mins: +mins});
+        localStorage.setItem('extraMins', JSON.stringify(store));
+        alert('Added');
+        document.getElementById('extraTeacher').value = '';
+        document.getElementById('weekYear').value = '';
+        document.getElementById('minutes').value = '';
+    },
     setupTimeZone(){
         document.getElementById('timeZone').addEventListener('change', e => {
             data.timeZone = e.target.value;
             ui.updateTimes();
             ui.renderAvailableNow();
         });
+    },
+
+    /* =============== NEW EXPORT FUNCTIONS =============== */
+    exportLocalCSV() {
+        const raw = JSON.parse(localStorage.getItem('extraMins') || '[]');
+        if (!raw.length) { alert('No data to export'); return; }
+
+        let csv = 'Teacher/Staff,Week,Minutes\n';
+        raw.forEach(r => {
+            csv += `"${r.who}","${r.week}",${r.mins}\n`;
+        });
+
+        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `extra_minutes_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    },
+
+    async exportToGoogleSheet() {
+        const raw = JSON.parse(localStorage.getItem('extraMins') || '[]');
+        if (!raw.length) { alert('No data to export'); return; }
+
+        const payload = raw.map(r => [r.who, r.week, r.mins]);
+
+        try {
+            await fetch(GOOGLE_SHEET_WEBAPP, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            alert('Data successfully sent to Google Sheet!');
+        } catch (e) {
+            console.error(e);
+            alert('Error sending data – check console');
+        }
     }
 };
 
