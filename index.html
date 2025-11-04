@@ -42,7 +42,7 @@
         .form-group label{display:block;font-weight:600;margin-bottom:8px;color:var(--text-color);font-size:18px}
         .form-group input,.form-group select{padding:12px;width:100%;max-width:300px;border:1px solid var(--input-border);border-radius:10px;background:var(--input-bg);box-shadow:inset 0 2px 4px var(--input-shadow);font-size:16px;color:var(--text-color);transition:box-shadow .2s ease,border-color .2s ease}
         .form-group input:focus,.form-group select:focus{outline:none;box-shadow:inset 0 2px 6px var(--input-shadow),0 0 0 3px rgba(52,211,153,.2);border-color:var(--accent-dark)}
-        button{padding:14px 30px;background:var(--available-bg);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:16px;font-weight:600;transition:transform .2s ease,background .3s ease,box-shadow .2s ease;box-shadow:0 3px 6px rgba(0,0,0,.15)}
+        button{padding:14px 30px;background:var(--available-bg);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:16px;font-weight:600;transition:transform .2s ease,background .3s ease,box-shadow .2s ease;box-shadow:0 3px 6px rgba(0,0,0,.15);margin:5px}
         button:hover{transform:translateY(-3px);background:var(--available-hover);box-shadow:0 4px 8px rgba(0,0,0,.2)}
         .totals{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:20px;align-items:center}
         .totals .month-buttons{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:400px}
@@ -58,6 +58,7 @@
         .availability-list p{margin:8px 0;font-size:16px}
         .schedule-block{margin-bottom:20px;padding:12px;background:rgba(240,250,255,0.95);border-radius:8px;border-left:4px solid var(--accent-color);font-size:15px}
         .schedule-block strong{font-weight:600;color:var(--accent-dark)}
+        .export-buttons{display:flex;gap:10px;margin-top:15px;flex-wrap:wrap;justify-content:center}
         @media (max-width:600px){
             .container{padding:20px;border-radius:15px}
             .section{padding:20px}
@@ -68,13 +69,13 @@
             .totals label{font-size:14px;margin-right:8px}
             .totals .month-buttons{max-width:100%}
             .availability-list{max-height:180px}
+            .export-buttons{justify-content:center}
         }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>IES Örebro Teacher Availability Dashboard</h1>
-
     <!-- TEACHERS -->
     <div class="section">
         <h2>Available Right Now</h2>
@@ -83,7 +84,6 @@
         <div class="teachers" id="availableTeachers"></div>
         <div class="availability-list" id="teacherResults"></div>
     </div>
-
     <!-- SUPPORT STAFF -->
     <div class="section">
         <h2>Support Staff</h2>
@@ -92,7 +92,6 @@
         <div class="teachers" id="availableSupport"></div>
         <div class="availability-list" id="supportResults"></div>
     </div>
-
     <!-- CHECK AVAILABILITY -->
     <div class="section">
         <h2>Check Availability for a Time Range</h2>
@@ -110,7 +109,6 @@
         <button onclick="ui.handleCheckAvailability()">Check Availability</button>
         <div class="availability-list" id="availabilityResults"></div>
     </div>
-
     <!-- EXTRA MINUTES -->
     <div class="section">
         <h2>Extra Worked Minutes</h2>
@@ -121,33 +119,47 @@
         <div class="form-group"><label>Week/Year:</label><input type="text" id="weekYear" placeholder="Week 43, 2025"></div>
         <div class="form-group"><label>Minutes:</label><input type="number" id="minutes"></div>
         <button onclick="ui.handleAddEntry()">Add</button>
+        <div class="export-buttons">
+            <button onclick="ui.exportLocalCSV()">Export Local CSV</button>
+            <button onclick="ui.exportToGoogleSheet()">Export to Google Sheet</button>
+        </div>
     </div>
-
     <!-- MONTHLY TOTALS -->
     <div class="section">
         <h2>Monthly Totals</h2>
         <div class="totals" id="monthTotals">
             <label for="yearSelect">Year:</label>
             <select id="yearSelect">
-                <option value="2023">2023</option><option value="2024">2024</option><option value="2025" selected>2025</option>
+                <option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option>
                 <option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option>
             </select>
             <div class="month-buttons">
                 <button>Jan</button><button>Feb</button><button>Mar</button><button>Apr</button>
                 <button>May</button><button>Jun</button><button>Jul</button><button>Aug</button>
-                <button>Sep</button><button class="active">Oct</button><button>Nov</button><button>Dec</button>
+                <button>Sep</button><button>Oct</button><button>Nov</button><button>Dec</button>
             </div>
         </div>
-        <p>Total for October 2025: 0 minutes</p>
+        <p id="monthlyTotalText">Total for <span id="currentMonthYear"></span>: <span id="totalMinutes">0</span> minutes</p>
     </div>
 </div>
 
 <script>
+/* ==== GOOGLE APPS SCRIPT WEB APP URL (REPLACE WITH YOUR OWN) ==== */
+const GOOGLE_SHEET_WEBAPP = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+
+/* ==== AUTO-SELECT CURRENT MONTH ==== */
+function getCurrentMonthYear() {
+    const now = new Date();
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthName = months[now.getMonth()];
+    const year = now.getFullYear();
+    return {month: monthName, year};
+}
+
 /* ==================== DATA ==================== */
 const data = {
     teachers: [],
     timeZone: 'Europe/Paris',
-
     async loadFromFile(){
         try{
             const r = await fetch('Lektioner.txt');
@@ -160,12 +172,10 @@ const data = {
             return this.fallbackData();
         }
     },
-
     roleOf(name){
         const support = ['Agnes Hellvig','Angelica Norgren','Garret Cooke','Wynonah Plattner','Vicenta Marie Linden'];
         return support.includes(name) ? 'support' : 'teacher';
     },
-
     fallbackData(){
         return [
             {name:"Agnes Hellvig",role:"support",schedule:{Monday:"08:00-11:35;13:10-14:10",Tuesday:"-",Wednesday:"-",Thursday:"08:15-09:15;09:25-10:25",Friday:"-"}},
@@ -174,7 +184,7 @@ const data = {
             {name:"Wynonah Plattner",role:"support",schedule:{Monday:"Check her schedule",Tuesday:"-",Wednesday:"-",Thursday:"-",Friday:"-"}},
             {name:"Vicenta Marie Linden",role:"support",schedule:{Monday:"12:35-14:20",Tuesday:"08:30-11:15;12:25-13:20",Wednesday:"-",Thursday:"-",Friday:"09:50-11:00;12:30-14:15"}},
             {name:"Alan Smith",role:"teacher",schedule:{Monday:"-;13:35-14:50",Tuesday:"-;09:20-10:30",Wednesday:"-",Thursday:"-",Friday:"-"}},
-            {name:"Alex Reid",role:"teacher",schedule:{Monday:"-",Tuesday:"09:00-10:00;13:20-23:59",Wednesday:"-",Thursday:"10:55-12:15",Friday:"-"}},
+            {name:"Alex Reid",role:"teacher",schedule:{Monday:"-",Tuesday:"09:00-10:00;13:20-16:00",Wednesday:"-",Thursday:"10:55-12:15",Friday:"-"}},
             {name:"Alvinda Hall",role:"teacher",schedule:{Monday:"09:35-10:45;13:40-14:40",Tuesday:"-",Wednesday:"12:35-14:00",Thursday:"09:00-10:20",Friday:"-"}},
             {name:"Alyssa Gestrinius",role:"teacher",schedule:{Monday:"10:30-11:30",Tuesday:"-",Wednesday:"-",Thursday:"-",Friday:"-"}},
             {name:"Amanda Bergström",role:"teacher",schedule:{Monday:"-;14:45-16:00",Tuesday:"-",Wednesday:"-;12:50-14:30",Thursday:"-",Friday:"-"}},
@@ -215,7 +225,6 @@ const data = {
             {name:"Zofia Czarnowska",role:"teacher",schedule:{Monday:"-",Tuesday:"-;14:45-16:00",Wednesday:"11:20-12:30",Thursday:"11:20-12:35;14:30-16:00",Friday:"-"}}
         ];
     },
-
     getWeeklySchedule(person){
         const days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
         const out = {};
@@ -232,27 +241,38 @@ const data = {
 const ui = {
     init(){
         this.updateTimes();
+
+        // Auto-select current month/year
+        const {month, year} = getCurrentMonthYear();
+        const yearSelect = document.getElementById('yearSelect');
+        yearSelect.value = year;
+
+        const monthButtons = document.querySelectorAll('#monthTotals .month-buttons button');
+        monthButtons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.textContent === month) btn.classList.add('active');
+        });
+
         data.loadFromFile().then(list => {
             data.teachers = list;
             this.renderAvailableNow();
             this.fillDropdown();
             this.setupSearchBars();
             this.setupTimeZone();
+            this.setupMonthButtons();
+            this.updateMonthlyTotal();
         });
     },
-
     updateTimes(){
         const opts = {hour:'2-digit',minute:'2-digit',hour12:false,timeZone:data.timeZone,timeZoneName:'short'};
-        const str = `Available as of ${new Date().toLocaleTimeString('en-US',opts)} (Week 2025-W43 / Oct 2025)`;
+        const str = `Available as of ${new Date().toLocaleTimeString('en-US',opts)} (Week 2025-W43 / Nov 2025)`;
         document.getElementById('availabilityTime').textContent = str;
         document.getElementById('supportTime').textContent = str;
     },
-
     renderAvailableNow(){
         this.renderSection('teacher');
         this.renderSection('support');
     },
-
     renderSection(role){
         const container = document.getElementById(role === 'teacher' ? 'availableTeachers' : 'availableSupport');
         container.innerHTML = '';
@@ -270,7 +290,6 @@ const ui = {
             container.innerHTML = `<p>No ${role}s available right now.</p>`;
         }
     },
-
     isAvailableNow(person, date, curMin){
         const day = date.toLocaleString('en-US', {weekday:'long', timeZone:data.timeZone});
         const sched = person.schedule[day] || "-";
@@ -285,12 +304,10 @@ const ui = {
             return sm <= curMin && em >= curMin;
         });
     },
-
     getCurrentMinutes(date){
         const [h,m] = date.toLocaleString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:data.timeZone}).split(':').map(Number);
         return h*60 + m;
     },
-
     fillDropdown(){
         const sel = document.getElementById('extraTeacher');
         sel.innerHTML = '<option value="">-- Select --</option>';
@@ -299,35 +316,28 @@ const ui = {
             opt.value = p.name; opt.textContent = p.name; sel.appendChild(opt);
         });
     },
-
     setupSearchBars(){
         const teacherInput = document.getElementById('teacherSearch');
         const supportInput = document.getElementById('supportSearch');
-
         teacherInput.addEventListener('input', () => this.handleSearch('teacher'));
         supportInput.addEventListener('input', () => this.handleSearch('support'));
-
         teacherInput.addEventListener('focus', () => document.getElementById('teacherResults').innerHTML = '');
         supportInput.addEventListener('focus', () => document.getElementById('supportResults').innerHTML = '');
     },
-
     handleSearch(role){
         const input = document.getElementById(role === 'teacher' ? 'teacherSearch' : 'supportSearch');
         const term = input.value.trim().toLowerCase();
         const resultsDiv = document.getElementById(role === 'teacher' ? 'teacherResults' : 'supportResults');
         resultsDiv.innerHTML = '';
-
         if (!term) {
             this.renderAvailableNow();
             return;
         }
-
         const matches = data.teachers.filter(p => p.role === role && p.name.toLowerCase().includes(term));
         if (matches.length === 0) {
             resultsDiv.innerHTML = '<p>No one found.</p>';
             return;
         }
-
         matches.forEach(person => {
             const block = document.createElement('div');
             block.className = 'schedule-block';
@@ -339,13 +349,11 @@ const ui = {
             resultsDiv.appendChild(block);
         });
     },
-
     showFullSchedule(name, targetId){
         const div = document.getElementById(targetId);
         div.innerHTML = '';
         const person = data.teachers.find(p => p.name === name);
         if (!person) return;
-
         const block = document.createElement('div');
         block.className = 'schedule-block';
         block.innerHTML = `<strong>${name}'s Weekly Schedule</strong><br>`;
@@ -355,24 +363,20 @@ const ui = {
         });
         div.appendChild(block);
     },
-
     handleCheckAvailability(){
         const date = document.getElementById('checkDate').value;
         const from = document.getElementById('timeFrom').value;
         const to = document.getElementById('timeTo').value;
         const out = document.getElementById('availabilityResults');
-
         if (!date || !from || !to) {
             out.innerHTML = '<p style="color:#b91c1c;">Please fill all fields.</p>';
             return;
         }
-
         const [fh, fm] = from.split(':').map(Number);
         const [th, tm] = to.split(':').map(Number);
         const fromMin = fh*60 + fm;
         const toMin = th*60 + tm;
         const checkDate = new Date(`${date}T${from}:00`);
-
         out.innerHTML = '';
         const matches = data.teachers.filter(p => this.isAvailableInRange(p, checkDate, fromMin, toMin));
         if (matches.length === 0) {
@@ -388,7 +392,6 @@ const ui = {
             out.appendChild(pEl);
         });
     },
-
     isAvailableInRange(person, date, fromMin, toMin){
         const day = date.toLocaleString('en-US', {weekday:'long', timeZone:data.timeZone});
         const sched = person.schedule[day] || '-';
@@ -403,7 +406,6 @@ const ui = {
             return sm <= toMin && em >= fromMin;
         });
     },
-
     getOverlappingTimes(sched, fromMin, toMin){
         return sched.split(';').filter(r => {
             if (r === '-' || !r) return false;
@@ -415,7 +417,6 @@ const ui = {
             return sm <= toMin && em >= fromMin;
         }).map(r => r.split('-').map(t => t.padStart(5,'0')).join('-'));
     },
-
     handleAddEntry(){
         const who = document.getElementById('extraTeacher').value;
         const week = document.getElementById('weekYear').value;
@@ -428,14 +429,80 @@ const ui = {
         document.getElementById('extraTeacher').value = '';
         document.getElementById('weekYear').value = '';
         document.getElementById('minutes').value = '';
+        this.updateMonthlyTotal(); // Refresh total after adding
     },
-
     setupTimeZone(){
         document.getElementById('timeZone').addEventListener('change', e => {
             data.timeZone = e.target.value;
             ui.updateTimes();
             ui.renderAvailableNow();
         });
+    },
+
+    /* =============== MONTHLY TOTAL & EXPORT =============== */
+    setupMonthButtons() {
+        const buttons = document.querySelectorAll('#monthTotals .month-buttons button');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                buttons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.updateMonthlyTotal();
+            });
+        });
+        document.getElementById('yearSelect').addEventListener('change', () => this.updateMonthlyTotal());
+    },
+
+    updateMonthlyTotal() {
+        const year = document.getElementById('yearSelect').value;
+        const activeBtn = document.querySelector('#monthTotals .month-buttons button.active');
+        const month = activeBtn ? activeBtn.textContent : '';
+        if (!month) return;
+
+        const data = JSON.parse(localStorage.getItem('extraMins') || '[]');
+        const total = data
+            .filter(r => r.week.includes(month) && r.week.includes(year))
+            .reduce((sum, r) => sum + r.mins, 0);
+
+        document.getElementById('currentMonthYear').textContent = `${month} ${year}`;
+        document.getElementById('totalMinutes').textContent = total;
+    },
+
+    exportLocalCSV() {
+        const raw = JSON.parse(localStorage.getItem('extraMins') || '[]');
+        if (!raw.length) { alert('No data to export'); return; }
+
+        let csv = 'Teacher/Staff,Week,Minutes\n';
+        raw.forEach(r => {
+            csv += `"${r.who}","${r.week}",${r.mins}\n`;
+        });
+
+        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `extra_minutes_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    },
+
+    async exportToGoogleSheet() {
+        const raw = JSON.parse(localStorage.getItem('extraMins') || '[]');
+        if (!raw.length) { alert('No data to export'); return; }
+
+        const payload = raw.map(r => [r.who, r.week, r.mins]);
+
+        try {
+            await fetch(GOOGLE_SHEET_WEBAPP, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            alert('Data successfully sent to Google Sheet!');
+        } catch (e) {
+            console.error(e);
+            alert('Error sending data – check console');
+        }
     }
 };
 
